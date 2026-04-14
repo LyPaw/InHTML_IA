@@ -16,7 +16,7 @@ Puedes probar la aplicación aquí: [https://in-html-ia.vercel.app/](https://in-
 ---
 
 ### 🤖 Potenciado por Inteligencia Artificial
-![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Groq AI](https://img.shields.io/badge/Groq-f55036?style=for-the-badge&logo=groq&logoColor=white)
 ![Claude AI](https://img.shields.io/badge/Claude%20AI-D97757?style=for-the-badge&logo=anthropic&logoColor=white)
 ![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa17?style=for-the-badge&logo=openai&logoColor=white)
 ![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-000000?style=for-the-badge&logo=githubcopilot&logoColor=white)
@@ -32,7 +32,7 @@ Puedes probar la aplicación aquí: [https://in-html-ia.vercel.app/](https://in-
 
 ---
 
-**InHtml AI** es una herramienta experimental que transforma bocetos hechos a mano en código **HTML y CSS** listo para producción en segundos. Utiliza la potencia de visión de **Gemini 1.5 Flash** para analizar trazos, formas y colores, convirtiendo una idea visual en una interfaz funcional.
+**InHtml AI** es una herramienta experimental que transforma bocetos hechos a mano en código **HTML y CSS** listo para producción en segundos. Utiliza la potencia de visión de **Groq** para analizar trazos, formas y colores, convirtiendo una idea visual en una interfaz funcional.
 
 ---
 
@@ -40,7 +40,7 @@ Puedes probar la aplicación aquí: [https://in-html-ia.vercel.app/](https://in-
 
 *   🎨 **Lienzo de Dibujo Avanzado:** Herramientas de Lápiz, Borrador y **Bote de Pintura (Flood-fill)**.
 *   🌈 **Selector de Color Pro:** Paleta neón predefinida y selector de color manual integrado.
-*   🧠 **Gemini AI Engine:** Integración con Google Gemini para una detección de UI precisa.
+*   🧠 **Groq AI Engine:** Integración con Groq para una detección de UI precisa.
 *   🔮 **Vista Previa en Tiempo Real:** Renderizado instantáneo del código generado.
 *   💎 **Interfaz Neon Glassmorphism:** Un diseño único, oscuro y vibrante con efectos de cristal.
 *   🛡️ **Resiliencia de API:** Sistema de reintentos automáticos para manejar errores temporales (503/429).
@@ -53,7 +53,7 @@ Este proyecto ha sido desarrollado íntegramente de forma **asistida y autónoma
 
 **Stack de Co-creación:**
 *   **Editor:** [Zed](https://zed.dev/), utilizado por su integración nativa con lenguajes y velocidad.
-*   **Orquestación:** [Gemini CLI](https://github.com/google/gemini-cli) para la ejecución de comandos y refactorización autónoma.
+*   **Orquestación:** Groq para la ejecución de comandos y refactorización autónoma.
 *   **Asistencia:** Una sinergia entre **Claude 3.5 Sonnet**, **GPT-4o** y **GitHub Copilot** para la resolución de problemas lógicos y estructurales.
 
 ### 📜 El Contexto del Agente (System Mandates)
@@ -146,7 +146,7 @@ Communication with the user is in Spanish. All code, file names, variables, comm
 3.  **Configurar variables de entorno**
     Crea un archivo `.env.local`:
     ```env
-    GEMINI_API_KEY=tu_clave_aqui
+    GROQ_API_KEY=tu_clave_aqui
     ```
 
 ---

@@ -12,7 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "InHtml AI | Del papel al Código",
   description:
-    "Dibuja un elemento y obtén su HTML y CSS con la potencia de Gemini AI.",
+    "Dibuja un elemento y obtén su HTML y CSS con la potencia de Groq AI.",
   applicationName: "InHtml",
   authors: [{ name: "LyPaw" }],
   creator: "LyPaw",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "InHtml AI",
     description:
-      "Dibuja un elemento y obtén su HTML y CSS con la potencia de Gemini AI.",
+      "Dibuja un elemento y obtén su HTML y CSS con la potencia de Groq AI.",
     type: "website",
   },
 };

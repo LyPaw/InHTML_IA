@@ -38,7 +38,7 @@ type ConvertErrorState = {
 };
 
 const LOADING_TIPS = [
-  "Analizando con Gemini AI...",
+  "Analizando con Groq AI...",
   "Descodificando trazos...",
   "Generando estructura semántica...",
   "Inyectando estilos modernos...",
@@ -200,7 +200,7 @@ export function Demo() {
 
   const errorTitle =
     errorState?.kind === "rate_limit"
-      ? "Gemini está ocupado"
+      ? "Groq está ocupado"
       : errorState?.kind === "quota"
         ? "Cuota no disponible"
         : errorState?.kind === "config"
@@ -248,7 +248,7 @@ export function Demo() {
           >
             Convierte tus bocetos en componentes HTML y CSS reales en segundos.
             Potenciado por la inteligencia visual de{" "}
-            <span className="text-white font-medium">Gemini 1.5 Flash</span>.
+            <span className="text-white font-medium">Groq AI</span>.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}

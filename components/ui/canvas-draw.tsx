@@ -518,7 +518,7 @@ export function CanvasDraw({
 
       <div className="rounded-2xl glass-card px-4 py-3 text-[13px] text-slate-400 text-center">
         Al dejar de dibujar,{" "}
-        <span className="text-gradient font-bold">Gemini</span> analizará tu
+        <span className="text-gradient font-bold">Groq</span> analizará tu
         boceto automáticamente.
       </div>
     </div>
