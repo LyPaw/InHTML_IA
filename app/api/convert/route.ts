@@ -1,71 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const SYSTEM_PROMPT = `You are a SENIOR VISION-TO-CODE ARCHITECT. Return ONLY a single complete HTML document. No markdown fences.`;
+const SYSTEM_PROMPT = `You are a SENIOR VISION-TO-CODE ARCHITECT. Return ONLY a single complete HTML document with inline CSS and JS. No markdown fences. No explanation. Just raw HTML.`;
 
-// Modelos en orden de preferencia (de mejor a más básico)
-const MODEL_PRIORITY = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-];
+// gemini-2.0-flash: estable, multimodal, sin "thinking", compatible con API v1beta
+const MODEL = "gemini-2.0-flash";
 
 export async function POST(request: NextRequest) {
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey) {
+    return NextResponse.json({ error: "Falta la clave GEMINI_API_KEY en las variables de entorno.", errorType: "config" }, { status: 500 });
+  }
+
+  let imageData: string;
   try {
-    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKey) return NextResponse.json({ error: "No API KEY" }, { status: 500 });
+    const body = await request.json();
+    imageData = body.imageData;
+  } catch {
+    return NextResponse.json({ error: "Cuerpo de la petición inválido." }, { status: 400 });
+  }
 
-    const { imageData } = await request.json();
-    const match = imageData.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (!match) return NextResponse.json({ error: "Imagen inválida" }, { status: 400 });
+  const match = imageData?.match(/^data:(image\/[\w+]+);base64,(.+)$/);
+  if (!match) {
+    return NextResponse.json({ error: "Imagen inválida o formato no soportado." }, { status: 400 });
+  }
 
-    const mimeType = match[1];
-    const data = match[2];
+  const mimeType = match[1];
+  const base64Data = match[2];
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
 
-    // --- PASO 1: LISTAR MODELOS DISPONIBLES EN TU CLAVE/REGIÓN ---
-    let availableModels: string[] = [];
-    try {
-      const modelList = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-      );
-      const json = await modelList.json();
-      availableModels =
-        json.models
-          ?.map((m: any) => m.name.replace("models/", ""))
-          .filter((m: string) => m.includes("gemini")) || [];
-      console.log(`[DEBUG] Modelos disponibles: ${availableModels.join(", ")}`);
-    } catch (e) {
-      console.error("No se pudo listar modelos:", e);
-    }
-
-    // --- PASO 2: ELEGIR EL MEJOR MODELO DISPONIBLE ---
-    let modelToUse = "gemini-2.5-flash"; // fallback por defecto
-
-    if (availableModels.length > 0) {
-      const found = MODEL_PRIORITY.find((preferred) =>
-        availableModels.some((available) => available.startsWith(preferred))
-      );
-      if (found) modelToUse = found;
-    }
-
-    console.log(`[DEBUG] Usando modelo: ${modelToUse}`);
-
-    const model = genAI.getGenerativeModel({ model: modelToUse });
-
-    const result = await model.generateContent([
-      { text: SYSTEM_PROMPT },
+  const payload = {
+    system_instruction: {
+      parts: [{ text: SYSTEM_PROMPT }],
+    },
+    contents: [
       {
-        inlineData: { data, mimeType },
+        role: "user",
+        parts: [
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: base64Data,
+            },
+          },
+          { text: "Convert this image/sketch into a complete HTML page with CSS." },
+        ],
       },
-      { text: "Generate HTML/CSS from this image." },
-    ]);
+    ],
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 8192,
+    },
+  };
 
-    const response = await result.response;
-    let html = response.text();
-    html = html
+  try {
+    const geminiRes = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const geminiData = await geminiRes.json();
+
+    // Si Gemini devuelve error HTTP
+    if (!geminiRes.ok) {
+      const errMsg = geminiData?.error?.message || geminiRes.statusText;
+      console.error("[Gemini API error]", geminiRes.status, errMsg);
+
+      if (geminiRes.status === 401 || geminiRes.status === 403) {
+        return NextResponse.json({ error: "Clave API inválida o sin permisos.", errorType: "auth" }, { status: 500 });
+      }
+      if (geminiRes.status === 429) {
+        return NextResponse.json({ error: "Límite de peticiones alcanzado. Espera un momento.", errorType: "rate_limit" }, { status: 500 });
+      }
+      return NextResponse.json({ error: `Error de Gemini: ${errMsg}`, errorType: "unknown" }, { status: 500 });
+    }
+
+    // Extraer texto de la respuesta
+    const candidate = geminiData?.candidates?.[0];
+    const rawText: string = candidate?.content?.parts
+      ?.filter((p: any) => p.text)
+      ?.map((p: any) => p.text)
+      ?.join("") ?? "";
+
+    if (!rawText) {
+      const reason = candidate?.finishReason ?? "sin contenido";
+      console.error("[Gemini] Respuesta vacía. finishReason:", reason);
+      return NextResponse.json({ error: `Gemini no generó contenido (${reason}). Intenta con un dibujo más detallado.`, errorType: "unknown" }, { status: 500 });
+    }
+
+    // Limpiar markdown fences si los hubiera
+    let html = rawText
       .replace(/^```html\s*/i, "")
       .replace(/^```\s*/, "")
       .replace(/\s*```$/, "")
@@ -73,15 +98,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ html });
 
-  } catch (error: any) {
-    console.error("[ERROR]:", error.message);
-    return NextResponse.json(
-      {
-        error: "Error de acceso a Google AI",
-        details: error.message,
-        hint: "Verifica que tu GEMINI_API_KEY sea válida.",
-      },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    console.error("[Fetch error]", err.message);
+    return NextResponse.json({ error: "No se pudo conectar con Google AI. Verifica tu conexión.", errorType: "unknown" }, { status: 500 });
   }
 }
