@@ -3,6 +3,14 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are a SENIOR VISION-TO-CODE ARCHITECT. Return ONLY a single complete HTML document. No markdown fences.`;
 
+// Modelos en orden de preferencia (de mejor a más básico)
+const MODEL_PRIORITY = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+];
+
 export async function POST(request: NextRequest) {
   try {
     const apiKey = (process.env.GEMINI_API_KEY || "").trim();
@@ -17,27 +25,32 @@ export async function POST(request: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // --- PASO 1: LISTAR MODELOS DISPONIBLES ---
-    // Esto nos dirá exactamente qué modelos puede usar TU clave en TU región
+    // --- PASO 1: LISTAR MODELOS DISPONIBLES EN TU CLAVE/REGIÓN ---
     let availableModels: string[] = [];
     try {
-        // Intentamos obtener la lista de modelos (esto requiere permisos de visualización)
-        // Si falla, usaremos una lista de fallback más agresiva
-        const modelList = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-        const json = await modelList.json();
-        availableModels = json.models?.map((m: any) => m.name.replace("models/", "")) || [];
+      const modelList = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+      );
+      const json = await modelList.json();
+      availableModels =
+        json.models
+          ?.map((m: any) => m.name.replace("models/", ""))
+          .filter((m: string) => m.includes("gemini")) || [];
+      console.log(`[DEBUG] Modelos disponibles: ${availableModels.join(", ")}`);
     } catch (e) {
-        console.error("No se pudo listar modelos:", e);
+      console.error("No se pudo listar modelos:", e);
     }
 
-    // --- PASO 2: ELEGIR EL MEJOR MODELO ---
-    // Buscamos modelos de visión en orden de preferencia
-    const visionModels = availableModels.filter(m => m.includes("flash") || m.includes("pro") || m.includes("vision"));
-    
-    // Si no pudimos listar o no hay modelos, probamos con el alias más básico
-    const modelToUse = visionModels.length > 0 ? visionModels[0] : "gemini-1.5-flash-8b";
+    // --- PASO 2: ELEGIR EL MEJOR MODELO DISPONIBLE ---
+    let modelToUse = "gemini-2.5-flash"; // fallback por defecto
 
-    console.log(`[DEBUG] Modelos detectados: ${availableModels.join(", ")}`);
+    if (availableModels.length > 0) {
+      const found = MODEL_PRIORITY.find((preferred) =>
+        availableModels.some((available) => available.startsWith(preferred))
+      );
+      if (found) modelToUse = found;
+    }
+
     console.log(`[DEBUG] Usando modelo: ${modelToUse}`);
 
     const model = genAI.getGenerativeModel({ model: modelToUse });
@@ -47,21 +60,28 @@ export async function POST(request: NextRequest) {
       {
         inlineData: { data, mimeType },
       },
-      { text: "Generate HTML/CSS from this image." }
+      { text: "Generate HTML/CSS from this image." },
     ]);
 
     const response = await result.response;
     let html = response.text();
-    html = html.replace(/^```html\s*/i, "").replace(/^```\s*/, "").replace(/\s*```$/, "").trim();
+    html = html
+      .replace(/^```html\s*/i, "")
+      .replace(/^```\s*/, "")
+      .replace(/\s*```$/, "")
+      .trim();
 
     return NextResponse.json({ html });
 
   } catch (error: any) {
     console.error("[ERROR]:", error.message);
-    return NextResponse.json({ 
-      error: "Error de acceso a Google AI", 
-      details: error.message,
-      hint: "Tu clave de API no parece tener acceso a los modelos de visión de Gemini 1.5. Verifica si estás en una región admitida o intenta usar una VPN."
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Error de acceso a Google AI",
+        details: error.message,
+        hint: "Verifica que tu GEMINI_API_KEY sea válida.",
+      },
+      { status: 500 }
+    );
   }
 }
